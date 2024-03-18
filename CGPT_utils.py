@@ -8,7 +8,7 @@ class InputEmbedding(nn.Module):
         super().__init__()
         self.d_model = d_model
         self.vocab_size = vocab_size
-        self.embedding = nn.Embedding(self.vocab_size)
+        self.embedding = nn.Embedding(self.vocab_size, d_model)
         
     def forward(self, x):
         return self.embedding(x)*math.sqrt(self.d_model)
@@ -24,7 +24,7 @@ class PositionalEncoding(nn.Module):
         pe = torch.zeros(sequence_length, d_model)
         position = torch.arange(0, sequence_length, dtype=torch.float).unsqueeze(1)
         
-        frequency_term = torch.exp(torch.arrange(0, d_model, 2, dtype=torch.float) * (-math.log(10000.0) / d_model))
+        frequency_term = torch.exp(torch.arange(0, d_model, 2, dtype=torch.float) * (-math.log(10000.0) / d_model))
         
         pe[:, 0::2] = torch.sin(position*frequency_term)
         pe[:, 1::2] = torch.cos(position*frequency_term)
@@ -165,7 +165,7 @@ class DecoderBlock(nn.Module):
         self.self_attention_block = self_attention_block
         self.cross_attention_block = cross_attention_block
         self.feed_forward_block = feed_forward_block
-        self.residual_connections = nn.Module([ResidualConnection(dropout) for _ in range(3)])
+        self.residual_connections = nn.ModuleList([ResidualConnection(dropout) for _ in range(3)])
         
     def forward(self, x, encoder_output, src_mask, tgt_mask):
         x = self.residual_connections[0](x, lambda x: self.self_attention_block(x, x, x, tgt_mask))
