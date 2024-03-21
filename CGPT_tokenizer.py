@@ -3,7 +3,7 @@ import pandas as pd
 from transformers import RobertaTokenizerFast
 import os
 
-def make_tokenizer(csv_path: str = "./data/test_dataset.csv", column: str = "SMILES", vocab_size: int = 265):
+def make_custum_tokenizer(csv_path: str = "./data/test_dataset.csv", column: str = "SMILES", vocab_size: int = 265):
     # Check if tokenizer file exists
     if os.path.exists("./tokenizer/vocab.json"):
         # If tokenizer file exists, load tokenizer from pretrained
@@ -27,4 +27,8 @@ def make_tokenizer(csv_path: str = "./data/test_dataset.csv", column: str = "SMI
     # Load the trained tokenizer
     tokenizer = RobertaTokenizerFast.from_pretrained("tokenizer")
         
+    return tokenizer
+
+def make_default_tokenizer():
+    tokenizer = RobertaTokenizerFast.from_pretrained("FacebookAI/roberta-base")
     return tokenizer
