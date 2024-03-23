@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import math
 
-
 class InputEmbedding(nn.Module):
     def __init__(self, d_model: int, vocab_size: int) -> None:
         super().__init__()
