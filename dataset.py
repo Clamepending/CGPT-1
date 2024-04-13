@@ -54,7 +54,7 @@ class ChemDataset(Dataset):
             'tgt_text': tgt_text,
         }
         
-    def causal_mask(length):
-        mask = torch.ones(length, length)
-        mask = torch.triu(mask)
-        return mask.unsqueeze(0).int() == 0
+def causal_mask(length):
+    mask = torch.ones(length, length)
+    mask = torch.triu(mask)
+    return mask.unsqueeze(0).int() == 0
