@@ -11,14 +11,15 @@ import pandas as pd
 from CGPT_utils import *
 import os
 import warnings
+from tqdm import tqdm
 
 import torchmetrics
 from torch.utils.tensorboard import SummaryWriter
 
 
 def greedy_decode(model, source, source_mask, tokenizer_src, tokenizer_tgt, max_len, device):
-    sos_idx = tokenizer_tgt.token_to_id('[SOS]')
-    eos_idx = tokenizer_tgt.token_to_id('[EOS]')
+    sos_idx = tokenizer_tgt.encode("<s>", add_special_tokens=False)
+    eos_idx = tokenizer_tgt.encode("</s>", add_special_tokens=False)
 
     # Precompute the encoder output and reuse it for every step
     encoder_output = model.encode(source, source_mask)
@@ -53,12 +54,12 @@ def get_ds(config):
     chem_seq_length = 32
     text_seq_length = 32
 
-    chem_tokenizer = CGPT_tokenizer.make_custum_tokenizer(csv_path="./data/train_dataset.csv", column="SMILES", vocab_size=chem_vocab_size)
+    chem_tokenizer = CGPT_tokenizer.make_custum_tokenizer(csv_path=config["SMILES dataset"], column="SMILES", vocab_size=chem_vocab_size)
     text_tokenizer = CGPT_tokenizer.make_default_tokenizer()
     
     
 
-    data = pd.read_csv('./data/train_dataset.csv')
+    data = pd.read_csv(config["SMILES dataset"])
     
     train_ds_size = int(0.9*len(data))
     validation_ds_size = len(data) - train_ds_size
@@ -107,8 +108,8 @@ def run_validation(model, validation_ds, tokenizer_src, tokenizer_tgt, max_len, 
 
             model_out = greedy_decode(model, encoder_input, encoder_mask, tokenizer_src, tokenizer_tgt, max_len, device)
 
-            source_text = batch["src_text"][0]
-            target_text = batch["tgt_text"][0]
+            source_text = batch["Description"][0]
+            target_text = batch["SMILES"][0]
             model_out_text = tokenizer_tgt.decode(model_out.detach().cpu().numpy())
 
             source_texts.append(source_text)
@@ -185,7 +186,7 @@ def train_model(config):
     else:
         print('No model to preload, starting from scratch')
 
-    loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.token_to_id('[PAD]'), label_smoothing=0.1).to(device)
+    loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.encode('<pad>', add_special_tokens = False), label_smoothing=0.1).to(device)
 
     for epoch in range(initial_epoch, config['num_epochs']):
         torch.cuda.empty_cache()
@@ -224,7 +225,7 @@ def train_model(config):
             global_step += 1
 
         # Run validation at the end of every epoch
-        run_validation(model, val_dataloader, tokenizer_src, tokenizer_tgt, config['seq_len'], device, lambda msg: batch_iterator.write(msg), global_step, writer)
+        # run_validation(model, val_dataloader, tokenizer_src, tokenizer_tgt, config['seq_len'], device, lambda msg: batch_iterator.write(msg), global_step, writer)
 
         # Save the model at the end of every epoch
         model_filename = get_weights_file_path(config, f"{epoch:02d}")

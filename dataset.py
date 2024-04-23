@@ -25,12 +25,12 @@ class ChemDataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        src_tgt_pair = self.dataset[idx]
-        src_text = src_tgt_pair[self.src_lang]
-        tgt_text = src_tgt_pair[self.tgt_format]
+        row = self.dataset.iloc[idx]
+        src_text = row[self.src_lang]
+        tgt_text = row[self.tgt_format]
 
-        encoder_input_ids = self.tokenizer(src_text, padding='max_length', truncation=True, max_length=self.seq_len, return_tensors='pt')['input_ids']
-        target = self.tokenizer(tgt_text, padding='max_length', truncation=True, max_length=(self.seq_len + 1), return_tensors='pt')['input_ids']
+        encoder_input_ids = self.tokenizer_src(src_text, padding='max_length', truncation=True, max_length=self.seq_len, return_tensors='pt')['input_ids']
+        target = self.tokenizer_tgt(tgt_text, padding='max_length', truncation=True, max_length=(self.seq_len + 1), return_tensors='pt')['input_ids']
 
 
         # Create decoder inputs by shifting target sequence to the right

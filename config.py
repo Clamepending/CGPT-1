@@ -6,13 +6,14 @@ def get_config():
         "lr": 10**-4,
         "seq_len": 350,
         "d_model" : 512,
-        "src_lang" : "en",
+        "src_lang" : "Description",
         "tgt_format" : "SMILES",
         "model_folder" : "weights",
         "model_basename": "tmodel_",
         "preload" : None,
         "tokenizer_file" : "tokenizer_{0}.json",
-        "experiement_name": "runs/tmodel",
+        "experiment_name": "runs/tmodel",
+        "SMILES dataset" : './data/test_dataset.csv',
     }
     
     
