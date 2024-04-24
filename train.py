@@ -61,17 +61,23 @@ def get_ds(config):
 
     data = pd.read_csv(config["SMILES dataset"])
     
-    train_ds_size = int(0.9*len(data))
-    validation_ds_size = len(data) - train_ds_size
-    train_ds_raw, val_ds_raw = random_split(data, [train_ds_size, validation_ds_size])
+    # train_ds_size = int(0.9*len(data))
+    # validation_ds_size = len(data) - train_ds_size
+    # train_ds_raw, val_ds_raw = random_split(data, [train_ds_size, validation_ds_size])
+    # train_df = pd.DataFrame(list(train_ds_raw))
+    # val_df = pd.DataFrame(list(val_ds_raw))
     
-    train_ds = ChemDataset(train_ds_raw, text_tokenizer, chem_tokenizer, config['src_lang'], config['tgt_format'], config['seq_len'])
-    validation_ds = ChemDataset(val_ds_raw, text_tokenizer, chem_tokenizer, config['src_lang'], config['tgt_format'], config['seq_len'])
+    validation_ds_size = int(0.1 * len(data))
+    val_df = data.iloc[-validation_ds_size:]
+    train_df = data.iloc[:-validation_ds_size]
+    
+    train_ds = ChemDataset(train_df, text_tokenizer, chem_tokenizer, config['src_lang'], config['tgt_format'], config['seq_len'])
+    validation_ds = ChemDataset(val_df, text_tokenizer, chem_tokenizer, config['src_lang'], config['tgt_format'], config['seq_len'])
     
     train_dataloader = DataLoader(train_ds, batch_size=config['batch_size'], shuffle=True)
     val_dataloader = DataLoader(validation_ds, batch_size=1, shuffle=True)
     
-    return train_dataloader, val_dataloader, chem_tokenizer, text_tokenizer
+    return train_dataloader, val_dataloader, text_tokenizer, chem_tokenizer
 
 
 def get_model(config, vocab_src_len, vocab_tgt_len):
@@ -165,7 +171,11 @@ def train_model(config):
     Path(f"{config['model_folder']}").mkdir(parents=True, exist_ok=True)
 
     train_dataloader, val_dataloader, tokenizer_src, tokenizer_tgt = get_ds(config)
+    
+    print(f"src and tgt vocab sizes: {tokenizer_src.vocab_size, tokenizer_tgt.vocab_size}")
+    
     model = get_model(config, tokenizer_src.vocab_size, tokenizer_tgt.vocab_size).to(device)
+    
     # Tensorboard
     writer = SummaryWriter(config['experiment_name'])
 
@@ -186,7 +196,7 @@ def train_model(config):
     else:
         print('No model to preload, starting from scratch')
 
-    loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.encode('<pad>', add_special_tokens = False), label_smoothing=0.1).to(device)
+    loss_fn = nn.CrossEntropyLoss(ignore_index=tokenizer_src.encode('<pad>', add_special_tokens = False)[0], label_smoothing=0.1).to(device)
 
     for epoch in range(initial_epoch, config['num_epochs']):
         torch.cuda.empty_cache()
@@ -198,7 +208,10 @@ def train_model(config):
             decoder_input = batch['decoder_input'].to(device) # (B, seq_len)
             encoder_mask = batch['encoder_mask'].to(device) # (B, 1, 1, seq_len)
             decoder_mask = batch['decoder_mask'].to(device) # (B, 1, seq_len, seq_len)
+            
+            # print(f"shapes: {encoder_input.shape, decoder_input.shape, encoder_mask.shape}")
 
+            # print(f"input: {encoder_input}")
             # Run the tensors through the encoder, decoder and the projection layer
             encoder_output = model.encode(encoder_input, encoder_mask) # (B, seq_len, d_model)
             decoder_output = model.decode(encoder_output, encoder_mask, decoder_input, decoder_mask) # (B, seq_len, d_model)

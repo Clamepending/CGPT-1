@@ -33,7 +33,8 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe', pe)
         
     def forward(self, x):
-        x = x + self.pe[:, :x.shape[1], :].requires_grad(False)
+        pe = self.pe.detach()  # Detach the positional encoding tensor
+        x = x + pe[:, :x.shape[1], :]
         return self.dropout(x)
         
 class LayerNormalization(nn.Module):
@@ -111,8 +112,8 @@ class MultiheadAttentionBlock(nn.Module):
         
         x, self.attention_scores = MultiheadAttentionBlock.attention(Q, K, V, self.dropout, mask)
         
-        
-        x = x.transpose(1,2).contiguous().view(x.shape[0], x.shape[1], x.shape[2]*x.shape[3])
+        # print(f"shapes of attentions: {x.shape[0]} {x.shape[1]} {x.shape[2]} {x.shape[3]}")
+        x = x.transpose(1,2).contiguous().view(x.shape[0], -1, self.num_heads*self.d_k)
         
         return self.Wo(x)
         
@@ -169,7 +170,7 @@ class DecoderBlock(nn.Module):
     def forward(self, x, encoder_output, src_mask, tgt_mask):
         x = self.residual_connections[0](x, lambda x: self.self_attention_block(x, x, x, tgt_mask))
         x = self.residual_connections[1](x, lambda x: self.cross_attention_block(x, encoder_output, encoder_output, src_mask))
-        x = self.feed_forward_block(x)
+        x = self.residual_connections[2](x, self.feed_forward_block)
         
         return x
         
@@ -249,6 +250,8 @@ def build_transformer(src_vocab_size: int, tgt_vocab_size: int, src_seq_len: int
     # embedding layers
     src_embed = InputEmbedding(d_model, src_vocab_size)
     tgt_embed = InputEmbedding(d_model, tgt_vocab_size)
+    
+    print("VOCAB SIZES", src_vocab_size, tgt_vocab_size)
     
     # positional encodings
     
