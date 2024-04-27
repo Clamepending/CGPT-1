@@ -81,7 +81,10 @@ def get_ds(config):
 
 
 def get_model(config, vocab_src_len, vocab_tgt_len):
-    model = build_transformer(vocab_src_len, vocab_tgt_len, config['seq_len'], config['seq_len'], config['d_model'])
+    if config["decoder only"]:
+        model = build_decoder_only_transformer(vocab_tgt_len, config['seq_len'], config['d_model'])
+    else:
+        model = build_transformer(vocab_src_len, vocab_tgt_len, config['seq_len'], config['seq_len'], config['d_model'])
     return model
 
 
@@ -171,7 +174,7 @@ def train_model(config):
     Path(f"{config['model_folder']}").mkdir(parents=True, exist_ok=True)
 
     train_dataloader, val_dataloader, tokenizer_src, tokenizer_tgt = get_ds(config)
-    
+        
     print(f"src and tgt vocab sizes: {tokenizer_src.vocab_size, tokenizer_tgt.vocab_size}")
     
     model = get_model(config, tokenizer_src.vocab_size, tokenizer_tgt.vocab_size).to(device)
@@ -213,8 +216,13 @@ def train_model(config):
 
             # print(f"input: {encoder_input}")
             # Run the tensors through the encoder, decoder and the projection layer
-            encoder_output = model.encode(encoder_input, encoder_mask) # (B, seq_len, d_model)
-            decoder_output = model.decode(encoder_output, encoder_mask, decoder_input, decoder_mask) # (B, seq_len, d_model)
+            if config["decoder only"]:
+                decoder_output = model.decode(decoder_input, decoder_mask)
+            else:
+                encoder_output = model.encode(encoder_input, encoder_mask) # (B, seq_len, d_model)
+                decoder_output = model.decode(encoder_output, encoder_mask, decoder_input, decoder_mask) # (B, seq_len, d_model)
+                
+            
             proj_output = model.project(decoder_output) # (B, seq_len, vocab_size)
 
             # Compare the output with the label

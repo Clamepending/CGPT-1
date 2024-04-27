@@ -227,10 +227,10 @@ class Transformer(nn.Module):
     
     
 class DecoderOnlyTransformer(nn.Module):
-    def __init__(self, decoder: Decoder, tgt_embed: InputEmbedding, tgt_pos: PositionalEncoding, projection_layer: ProjectionLayer) -> None:
+    def __init__(self, encoder: Encoder, tgt_embed: InputEmbedding, tgt_pos: PositionalEncoding, projection_layer: ProjectionLayer) -> None:
         super().__init__()
         
-        self.decoder = decoder
+        self.encoder = encoder
         self.tgt_embed = tgt_embed
         self.tgt_pos = tgt_pos
         self.projection_layer = projection_layer
@@ -239,7 +239,7 @@ class DecoderOnlyTransformer(nn.Module):
     def decode(self, tgt, tgt_mask):
         tgt = self.tgt_embed(tgt)
         tgt = self.tgt_pos(tgt)
-        return self.decoder(tgt, tgt, tgt_mask)
+        return self.encoder(tgt, tgt_mask)
     
     def project(self, x):
         return self.projection_layer(x)
@@ -293,19 +293,18 @@ def build_decoder_only_transformer(vocab_size: int, seq_len: int, d_model:int = 
     # positional encodings
     pos = PositionalEncoding(d_model, seq_len, dropout)
     
-    decoder_blocks = []
+    encoder_blocks = []
     for _ in range(N):
-        decoder_self_attention_block = MultiheadAttentionBlock(d_model, h, dropout)
-        decoder_cross_attention_block = MultiheadAttentionBlock(d_model, h, dropout)
+        encoder_self_attention_block = MultiheadAttentionBlock(d_model, h, dropout)
         feed_fwd_block = FeedForwardBlock(d_model, dff, dropout)
-        decoder_block = DecoderBlock(decoder_self_attention_block, decoder_cross_attention_block, feed_fwd_block, dropout)
-        decoder_blocks.append(decoder_block)
+        encoder_block = EncoderBlock(encoder_self_attention_block, feed_fwd_block, dropout)
+        encoder_blocks.append(encoder_block)
     
-    decoder = Decoder(nn.ModuleList(decoder_blocks))
+    encoder = Encoder(nn.ModuleList(encoder_blocks))
     
     projection_layer = ProjectionLayer(d_model, vocab_size)
     
-    transformer = DecoderOnlyTransformer(decoder, embed, pos, projection_layer)
+    transformer = DecoderOnlyTransformer(encoder, embed, pos, projection_layer)
     
     for p in transformer.parameters():
         if p.dim() > 1:
