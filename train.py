@@ -15,6 +15,7 @@ from tqdm import tqdm
 
 import torchmetrics
 from torch.utils.tensorboard import SummaryWriter
+from transformers import RobertaTokenizerFast
 
 
 def greedy_decode(model, source, source_mask, tokenizer_src, tokenizer_tgt, max_len, device):
@@ -51,15 +52,31 @@ def greedy_decode(model, source, source_mask, tokenizer_src, tokenizer_tgt, max_
 def get_ds(config):
     
     chem_vocab_size = 500
-    chem_seq_length = 32
-    text_seq_length = 32
+ 
+    
+    
+    chem_tokenizer_dir = "chem_tokenizer"
+    text_tokenizer_dir = "text_tokenizer"
 
-    chem_tokenizer = CGPT_tokenizer.make_custum_tokenizer(csv_path=config["SMILES dataset"], column="SMILES", vocab_size=chem_vocab_size)
-    text_tokenizer = CGPT_tokenizer.make_default_tokenizer()
+    # Check if the directory exists
+    if os.path.exists(chem_tokenizer_dir) and os.path.exists(text_tokenizer_dir):
+        try:
+            # Load the tokenizers
+            chem_tokenizer = RobertaTokenizerFast.from_pretrained(chem_tokenizer_dir)
+            text_tokenizer = RobertaTokenizerFast.from_pretrained(text_tokenizer_dir)
+            print("Tokenizers loaded successfully.")
+        except Exception as e:
+            print(f"Error loading tokenizers: {e}")
+    else:
+        print("Tokenizers directory not found.")
+        chem_tokenizer = CGPT_tokenizer.make_custum_tokenizer(csv_path=config["SMILES dataset"], column="SMILES", vocab_size=chem_vocab_size)
+        text_tokenizer = CGPT_tokenizer.make_default_tokenizer()
+        text_tokenizer.save_pretrained("chem_tokenizer")
+        chem_tokenizer.save_pretrained("text_tokenizer")
     
     
 
-    data = pd.read_csv(config["SMILES dataset"])
+    # data = pd.read_csv(config["SMILES dataset"])
     
     # train_ds_size = int(0.9*len(data))
     # validation_ds_size = len(data) - train_ds_size
@@ -67,9 +84,12 @@ def get_ds(config):
     # train_df = pd.DataFrame(list(train_ds_raw))
     # val_df = pd.DataFrame(list(val_ds_raw))
     
-    validation_ds_size = int(0.1 * len(data))
-    val_df = data.iloc[-validation_ds_size:]
-    train_df = data.iloc[:-validation_ds_size]
+    # validation_ds_size = int(0 * len(data))
+    # val_df = data.iloc[-validation_ds_size:]
+    # train_df = data.iloc[:-validation_ds_size]
+    
+    train_df = pd.read_csv(config["SMILES dataset"])
+    val_df = pd.read_csv(config["validation dataset"])
     
     train_ds = ChemDataset(train_df, text_tokenizer, chem_tokenizer, config['src_lang'], config['tgt_format'], config['seq_len'])
     validation_ds = ChemDataset(val_df, text_tokenizer, chem_tokenizer, config['src_lang'], config['tgt_format'], config['seq_len'])

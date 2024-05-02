@@ -2,18 +2,19 @@ from pathlib import Path
 def get_config():
     return {
         "batch_size" : 8,
-        "num_epochs" : 20,
+        "num_epochs" : 5,
         "lr": 10**-4,
-        "seq_len": 350,
-        "d_model" : 512,
-        "src_lang" : "Description",
+        "seq_len": 80,
+        "d_model" : 128,
+        "src_lang" : "ChEMBL_ID",
         "tgt_format" : "SMILES",
         "model_folder" : "weights",
         "model_basename": "tdmodel_",
         "preload" : None,
         "tokenizer_file" : "tokenizer_{0}.json",
         "experiment_name": "runs/tmodel",
-        "SMILES dataset" : './data/test_dataset.csv',
+        "SMILES dataset" : './data/train_dataset.csv',
+        "validation dataset" : './data/test_dataset.csv',
         "decoder only" : True,
     }
     

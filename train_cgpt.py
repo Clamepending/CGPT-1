@@ -1,7 +1,7 @@
 from config import get_config
 cfg = get_config()
-cfg['batch_size'] = 6
-cfg['preload'] = None
+# cfg['batch_size'] = 6
+cfg['preload'] = "04"
 cfg['num_epochs'] = 30
 
 from train import train_model
